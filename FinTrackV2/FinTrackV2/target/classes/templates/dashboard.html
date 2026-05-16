@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — FinTrack</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <i class="fa-solid fa-wallet brand-icon"></i>
+        <span>FinTrack</span>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="/dashboard" class="nav-item active">
+            <i class="fa-solid fa-gauge-high"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="/expenses" class="nav-item">
+            <i class="fa-solid fa-receipt"></i>
+            <span>Expenses</span>
+        </a>
+        <a href="/income" class="nav-item">
+            <i class="fa-solid fa-money-bill-trend-up"></i>
+            <span>Income</span>
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <a href="/logout" class="nav-item logout-item">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Logout</span>
+        </a>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-content">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <button class="sidebar-toggle d-lg-none" onclick="toggleSidebar()">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div>
+                <h1 class="page-title">Financial Dashboard</h1>
+                <p class="page-subtitle">Welcome back, <span th:text="${username != null ? username : userEmail}" class="highlight"></span> 👋</p>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <!-- Profile Pic with Upload Modal Trigger -->
+            <div class="profile-avatar-wrap" data-bs-toggle="modal" data-bs-target="#profileModal" title="Change profile picture">
+                <img th:if="${profilePic != null}" th:src="${profilePic}" alt="Profile" class="profile-avatar">
+                <div th:if="${profilePic == null}" class="profile-avatar profile-avatar-placeholder">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <span class="avatar-edit-badge"><i class="fa-solid fa-camera"></i></span>
+            </div>
+            <a href="/download/pdf" class="btn btn-pdf">
+                <i class="fa-solid fa-file-pdf me-2"></i>Export PDF
+            </a>
+        </div>
+    </header>
+
+    <!-- STAT CARDS -->
+    <div class="row g-4 mt-2">
+        <div class="col-xl-4 col-md-6">
+            <div class="stat-card income-card">
+                <div class="stat-info">
+                    <p class="stat-label">Total Income</p>
+                    <h2 class="stat-value">₹<span th:text="${#numbers.formatDecimal(income, 1, 2)}"></span></h2>
+                    <span class="stat-badge"><i class="fa-solid fa-arrow-trend-up"></i> This period</span>
+                </div>
+                <div class="stat-icon-wrap">
+                    <i class="fa-solid fa-money-bill-trend-up"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6">
+            <div class="stat-card expense-card">
+                <div class="stat-info">
+                    <p class="stat-label">Total Expenses</p>
+                    <h2 class="stat-value">₹<span th:text="${#numbers.formatDecimal(expense, 1, 2)}"></span></h2>
+                    <span class="stat-badge"><i class="fa-solid fa-arrow-trend-down"></i> This period</span>
+                </div>
+                <div class="stat-icon-wrap">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-12">
+            <div class="stat-card balance-card">
+                <div class="stat-info">
+                    <p class="stat-label">Net Balance</p>
+                    <h2 class="stat-value">₹<span th:text="${#numbers.formatDecimal(balance, 1, 2)}"></span></h2>
+                    <span class="stat-badge"><i class="fa-solid fa-piggy-bank"></i> Available</span>
+                </div>
+                <div class="stat-icon-wrap">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="row g-4 mt-2">
+        <div class="col-xl-8">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h4><i class="fa-solid fa-chart-line me-2 text-info"></i>Monthly Expense Trend</h4>
+                </div>
+                <div class="chart-body">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h4><i class="fa-solid fa-chart-pie me-2 text-info"></i>By Category</h4>
+                </div>
+                <div class="chart-body">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECENT TRANSACTIONS -->
+    <div class="table-card mt-4">
+        <div class="table-card-header">
+            <h4><i class="fa-solid fa-clock-rotate-left me-2"></i>Recent Transactions</h4>
+            <div class="d-flex gap-2">
+                <a href="/expenses" class="btn btn-add">
+                    <i class="fa-solid fa-plus me-1"></i>Add Expense
+                </a>
+                <a href="/income" class="btn btn-add-income">
+                    <i class="fa-solid fa-plus me-1"></i>Add Income
+                </a>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table custom-table">
+                <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="expense : ${recentExpenses}">
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="tx-icon"><i class="fa-solid fa-receipt"></i></div>
+                            <span th:text="${expense.title}"></span>
+                        </div>
+                    </td>
+                    <td><span class="category-badge" th:text="${expense.category}"></span></td>
+                    <td class="amount-col">₹<span th:text="${#numbers.formatDecimal(expense.amount, 1, 2)}"></span></td>
+                    <td th:text="${expense.date}"></td>
+                    <td><span class="status completed"><i class="fa-solid fa-check me-1"></i>Completed</span></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(recentExpenses)}">
+                    <td colspan="5" class="text-center py-4 text-muted">
+                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                        No transactions yet. Start by adding an expense!
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- PROFILE PIC MODAL -->
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-dark">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa-solid fa-camera me-2"></i>Change Profile Picture</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="profile-preview-wrap mb-3">
+                    <img th:if="${profilePic != null}" th:src="${profilePic}" id="previewImg" class="profile-preview-img">
+                    <div th:if="${profilePic == null}" class="profile-preview-placeholder" id="previewPlaceholder">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                </div>
+                <form th:action="@{/profile/upload-pic}" method="post" enctype="multipart/form-data" id="picForm">
+                    <label class="btn btn-outline-info mb-3" for="picInput">
+                        <i class="fa-solid fa-upload me-2"></i>Choose Image
+                    </label>
+                    <input type="file" id="picInput" name="file" accept="image/*" class="d-none" onchange="previewFile(this)">
+                    <p class="text-muted small">JPG, PNG or WEBP — Max 5MB</p>
+                    <button type="submit" class="btn auth-btn w-100">
+                        <i class="fa-solid fa-cloud-arrow-up me-2"></i>Upload Picture
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+const months = /*[[${months}]]*/ [];
+const monthlyAmounts = /*[[${monthlyAmounts}]]*/ [];
+const categories = /*[[${categories}]]*/ [];
+const amounts = /*[[${amounts}]]*/ [];
+
+// Line Chart
+const expCtx = document.getElementById('expenseChart').getContext('2d');
+new Chart(expCtx, {
+    type: 'bar',
+    data: {
+        labels: months,
+        datasets: [{
+            label: 'Monthly Expenses (₹)',
+            data: monthlyAmounts,
+            backgroundColor: 'rgba(99, 102, 241, 0.7)',
+            borderColor: '#6366f1',
+            borderWidth: 2,
+            borderRadius: 8,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#94a3b8', font: { family: 'Inter' } } } },
+        scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } }
+        }
+    }
+});
+
+// Doughnut Chart
+const catCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(catCtx, {
+    type: 'doughnut',
+    data: {
+        labels: categories,
+        datasets: [{
+            data: amounts,
+            backgroundColor: ['#6366f1','#06b6d4','#f59e0b','#10b981','#f43f5e','#8b5cf6','#ec4899'],
+            borderWidth: 0, hoverOffset: 8
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 12 } } }
+    }
+});
+
+// Profile preview
+function previewFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const placeholder = document.getElementById('previewPlaceholder');
+        if (placeholder) placeholder.style.display = 'none';
+        let img = document.getElementById('previewImg');
+        if (!img) {
+            img = document.createElement('img');
+            img.id = 'previewImg';
+            img.className = 'profile-preview-img';
+            document.querySelector('.profile-preview-wrap').appendChild(img);
+        }
+        img.src = e.target.result;
+        img.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('sidebar-open');
+}
+/*]]>*/
+</script>
+</body>
+</html>
